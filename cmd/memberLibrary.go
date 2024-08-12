@@ -20,10 +20,11 @@ var memberLibraryCmd = &cobra.Command{
 NOTE - We do not support removing domains from the allow list via the command line`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Assign values from flags
-		_DOMAIN, _ := cmd.Flags().GetString("domain")
-		_METHOD, _ := cmd.Flags().GetString("method")
-		_DATABASE, _ := cmd.Flags().GetString("database")
-		_TABLE, _ := cmd.Flags().GetString("table")
+		_FLAGS := cmd.Flags()
+		_DOMAIN, _ := _FLAGS.GetString("domain")
+		_METHOD, _ := _FLAGS.GetString("method")
+		_DATABASE, _ := _FLAGS.GetString("database")
+		_TABLE, _ := _FLAGS.GetString("table")
 
 		/* TODO - Make this a function */
 		if _DATABASE == "DEFAULT" {
@@ -73,8 +74,8 @@ NOTE - We do not support removing domains from the allow list via the command li
 }
 
 func addToAirtable(airtableClient airtable.Client, domain string, database string, table string) (bool) {
-	exists := checkAirtable(airtableClient, domain, database, table)
 	
+	exists := checkAirtable(airtableClient, domain, database, table)
 	if exists {
 		fmt.Printf("%s already exists in the Airtable database", domain)
 		return true
@@ -102,7 +103,7 @@ func checkAirtable(airtableClient airtable.Client, domain string, database strin
 	tbl := airtableClient.GetTable(database, table)
 
 	// TODO - Loop through the pages of this response
-	records, err := tbl.GetRecords().ReturnFields("domains").InStringFormat("America/New_York", "us").Do()
+	records, err := tbl.GetRecords().ReturnFields("domains").InStringFormat("America/New_York", "us").WithOffset("offset").Do()
 	
 	var check bool
 	check = false
