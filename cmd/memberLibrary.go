@@ -59,7 +59,12 @@ NOTE - We do not support removing domains from the allow list via the command li
 		if _METHOD == "ADD" {
 			addToAirtable(*AIRTABLE_CLIENT, _DOMAIN, _DATABASE, _TABLE)
 		} else if _METHOD == "CHECK" {
-			checkAirtable(*AIRTABLE_CLIENT, _DOMAIN, _DATABASE, _TABLE)
+			exists := checkAirtable(*AIRTABLE_CLIENT, _DOMAIN, _DATABASE, _TABLE)
+			if exists {
+				fmt.Printf("✅ - %s exists in the Airtable database\n", _DOMAIN)
+			} else {
+				fmt.Printf("❌ - A record for %s does NOT exist in the Airtable database\n", _DOMAIN)
+			}
 		} else {
 			panic("** ERROR - Invalid method value called")
 		}
@@ -67,48 +72,54 @@ NOTE - We do not support removing domains from the allow list via the command li
 	},
 }
 
-func addToAirtable(airtableClient airtable.Client, domain string, database string, table string) {
+func addToAirtable(airtableClient airtable.Client, domain string, database string, table string) (bool) {
+	exists := checkAirtable(airtableClient, domain, database, table)
+	
+	if exists {
+		fmt.Printf("%s already exists in the Airtable database", domain)
+		return true
+	}
+	
 	tbl := airtableClient.GetTable(database, table)
 	recordsToAdd := airtable.Records{
 		Records: []*airtable.Record{
 			{
 				Fields: map[string]any{
-					"Player": domain,
+					"domains": domain,
 				},
 			},
 		},
 	}
-
+	
 	_, err := tbl.AddRecords(&recordsToAdd)
-
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("✅ - %s was successfully added to Airtable\n", domain)
+	return true
 }
 
-func checkAirtable(airtableClient airtable.Client, domain string, database string, table string) {
+func checkAirtable(airtableClient airtable.Client, domain string, database string, table string) (bool) {
 	tbl := airtableClient.GetTable(database, table)
 
-	records, err := tbl.GetRecords().ReturnFields("Player").InStringFormat("America/New_York", "us").Do()
+	// TODO - Loop through the pages of this response
+	records, err := tbl.GetRecords().ReturnFields("domains").InStringFormat("America/New_York", "us").Do()
+	
 	var check bool
 	check = false
-	for _, player := range records.Records {
-		playerName := player.Fields["Player"].(string)
-		if strings.ToUpper(domain) == strings.ToUpper(playerName) {
+	
+	fmt.Println(len(records.Records))
+	for _, domainRecord := range records.Records {
+		domainRecordName := domainRecord.Fields["domains"].(string)
+		if strings.ToUpper(domain) == strings.ToUpper(domainRecordName) {
 			check = true
 		}
 	}
-
+	
 	if err != nil {
 		panic(err)
 	}
 
-	if check {
-		fmt.Printf("✅ - %s is present in the Airtable database\n", domain)
-	} else {
-		fmt.Printf("❌ - %s is NOT present in the Airtable database\n", domain)
-	}
+	return check
 }
 
 func init() {
