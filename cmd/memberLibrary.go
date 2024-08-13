@@ -51,7 +51,7 @@ NOTE - We do not support removing domains from the allow list via the command li
 func addToAirtable(airtableClient airtable.Client, domain string, database string, table string) bool {
 	exists := checkAirtable(airtableClient, domain, database, table)
 	if exists {
-		fmt.Printf("%s already exists in the Airtable database", domain)
+		fmt.Printf("%s already exists in the Airtable database\n", domain)
 		return true
 	}
 
@@ -70,6 +70,8 @@ func addToAirtable(airtableClient airtable.Client, domain string, database strin
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Printf("✅ - %s was written to the Airtable database successfully\n", domain)
 	return true
 }
 
