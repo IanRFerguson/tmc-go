@@ -5,7 +5,7 @@
 ## Installation
 Install on your local machine like so:
 ```
-go get -u github.com/IanRFerguson/tmc-go
+go install github.com/IanRFerguson/tmc-go@latest
 ```
 
 TMC Engineering has the `tmc-go Member Library .env` file in their 1Password vault. It should look like the `template.env` file in this repo.
