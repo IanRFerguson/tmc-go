@@ -6,6 +6,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/mehanizm/airtable"
 	"github.com/spf13/cobra"
@@ -27,23 +28,20 @@ NOTE - We do not support removing domains from the allow list via the command li
 
 		_DATABASE = checkEnvironment(_DATABASE, "AIRTABLE_DATABASE", "DEFAULT")
 		_TABLE = checkEnvironment(_TABLE, "AIRTABLE_TABLE", "DEFAULT")
+		_API := checkEnvironment("", "AIRTABLE_API_KEY", "") // NOTE - This is a little hacky but follows the pattern
 
-		// NOTE - This is a little hacky but follows the pattern
-		_API := checkEnvironment("", "AIRTABLE_API_KEY", "")
-
-		// Execute commands
 		AIRTABLE_CLIENT := airtable.NewClient(_API)
-
-		if _METHOD == "ADD" {
+		switch strings.ToUpper(_METHOD) {
+		case "ADD":
 			addToAirtable(*AIRTABLE_CLIENT, _DOMAIN, _DATABASE, _TABLE)
-		} else if _METHOD == "CHECK" {
+		case "CHECK":
 			exists := checkAirtable(*AIRTABLE_CLIENT, _DOMAIN, _DATABASE, _TABLE)
 			if exists {
 				fmt.Printf("✅ - %s exists in the Airtable database\n", _DOMAIN)
 			} else {
 				fmt.Printf("❌ - A record for %s does NOT exist in the Airtable database\n", _DOMAIN)
 			}
-		} else {
+		default:
 			panic("** ERROR - Invalid method value called")
 		}
 
