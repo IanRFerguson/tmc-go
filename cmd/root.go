@@ -1,6 +1,5 @@
 /*
-Copyright © 2024 NAME HERE IANFERGUSONRVA@gmail.com
-
+Copyright © 2024 IAN R FERGUSON IANFERGUSONRVA@gmail.com
 */
 package cmd
 
@@ -10,18 +9,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "tmc",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "tmc-go is a set of command line tools optimized for The Movement Cooperative",
+	Long: `tmc-go is a CLI library for The Movement Coopeative written in Go.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+It's intended to streamline development environments and minimize production code.`,
 }
 
 func Execute() {
