@@ -6,7 +6,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/mehanizm/airtable"
 	"github.com/spf13/cobra"
@@ -26,33 +25,11 @@ NOTE - We do not support removing domains from the allow list via the command li
 		_DATABASE, _ := _FLAGS.GetString("database")
 		_TABLE, _ := _FLAGS.GetString("table")
 
-		/* TODO - Make this a function */
-		if _DATABASE == "DEFAULT" {
-			_DB_ENV, _DB_ENV_EXISTS := os.LookupEnv("AIRTABLE_DATABASE")
+		_DATABASE = checkEnvironment(_DATABASE, "AIRTABLE_DATABASE", "DEFAULT")
+		_TABLE = checkEnvironment(_TABLE, "AIRTABLE_TABLE", "DEFAULT")
 
-			if !_DB_ENV_EXISTS {
-				panic("** ERROR ** No --database flag passed in and `AIRTABLE_DATABASE` missing in environment")
-			}
-
-			_DATABASE = _DB_ENV
-		}
-
-		if _TABLE == "DEFAULT" {
-			_TABLE_ENV, _TABLE_ENV_EXISTS := os.LookupEnv("AIRTABLE_TABLE")
-
-			if !_TABLE_ENV_EXISTS {
-				panic("** ERROR ** No --database flag passed in and `AIRTABLE_DATABASE` missing in environment")
-			}
-
-			_TABLE = _TABLE_ENV
-
-		}
-
-		_API, _API_PRESENT := os.LookupEnv("AIRTABLE_API_KEY")
-
-		if !_API_PRESENT {
-			panic("** ERROR ** Missing Airtable API Key - set `AIRTABLE_API_KEY` in your environment")
-		}
+		// NOTE - This is a little hacky but follows the pattern
+		_API := checkEnvironment("", "AIRTABLE_API_KEY", "")
 
 		// Execute commands
 		AIRTABLE_CLIENT := airtable.NewClient(_API)
@@ -73,14 +50,13 @@ NOTE - We do not support removing domains from the allow list via the command li
 	},
 }
 
-func addToAirtable(airtableClient airtable.Client, domain string, database string, table string) (bool) {
-	
+func addToAirtable(airtableClient airtable.Client, domain string, database string, table string) bool {
 	exists := checkAirtable(airtableClient, domain, database, table)
 	if exists {
 		fmt.Printf("%s already exists in the Airtable database", domain)
 		return true
 	}
-	
+
 	tbl := airtableClient.GetTable(database, table)
 	recordsToAdd := airtable.Records{
 		Records: []*airtable.Record{
@@ -91,7 +67,7 @@ func addToAirtable(airtableClient airtable.Client, domain string, database strin
 			},
 		},
 	}
-	
+
 	_, err := tbl.AddRecords(&recordsToAdd)
 	if err != nil {
 		panic(err)
@@ -99,28 +75,69 @@ func addToAirtable(airtableClient airtable.Client, domain string, database strin
 	return true
 }
 
-func checkAirtable(airtableClient airtable.Client, domain string, database string, table string) (bool) {
+func checkAirtable(airtableClient airtable.Client, domain string, database string, table string) bool {
 	tbl := airtableClient.GetTable(database, table)
 
-	// TODO - Loop through the pages of this response
-	records, err := tbl.GetRecords().ReturnFields("domains").InStringFormat("America/New_York", "us").WithOffset("offset").Do()
-	
-	var check bool
-	check = false
-	
-	fmt.Println(len(records.Records))
-	for _, domainRecord := range records.Records {
-		domainRecordName := domainRecord.Fields["domains"].(string)
-		if strings.ToUpper(domain) == strings.ToUpper(domainRecordName) {
+	/*
+		The logic here is as follows...
+			* The Airtable API is called
+			* The results of the reponse are pushed to an array
+			* If an offset is present, it is fed into the next API call
+			* If an offset is NOT present, break out of the loop
+	*/
+
+	endLoop, check, offset := false, false, ""
+	var domainArray []string
+	for !endLoop {
+		// Hit Airtable API with offset
+		records, err := tbl.GetRecords().
+			ReturnFields("domains").
+			WithOffset(offset).
+			Do()
+
+		// Raise errors inline (all or nothing)
+		if err != nil {
+			panic(err)
+		}
+
+		// Iteratively add domain names to the running domain
+		for _, rec := range records.Records {
+			domainArray = append(domainArray, rec.Fields["domains"].(string))
+		}
+
+		/*
+			Evaluate the offset value here ... if it's included in the body
+			of the API response we can pass it into the next API call
+		*/
+		offset = records.Offset
+		if offset == "" {
+			break
+		}
+	}
+
+	// Evaluate if the incoming domain is included in the domain array
+	for _, airtableDomain := range domainArray {
+		if airtableDomain == domain {
 			check = true
 		}
 	}
-	
-	if err != nil {
-		panic(err)
-	}
 
 	return check
+}
+
+func checkEnvironment(flagValue string, envVariable string, defaultValue string) string {
+	if flagValue == defaultValue {
+		_ENV, _ENV_EXISTS := os.LookupEnv(envVariable)
+
+		if !_ENV_EXISTS {
+			msg := fmt.Sprintf("** ERROR ** No --database flag passed in and `%s` missing in environment", envVariable)
+			panic(msg)
+		}
+
+		return _ENV
+	}
+
+	return flagValue
 }
 
 func init() {
