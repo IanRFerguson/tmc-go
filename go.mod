@@ -1,6 +1,6 @@
 module github.com/IanRFerguson/tmc-go
 
-go 1.22.1
+go 1.22.3
 
 require (
 	github.com/mehanizm/airtable v0.3.1
