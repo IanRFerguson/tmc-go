@@ -1,10 +1,10 @@
 /*
 Copyright © 2024 IAN R FERGUSON IANFERGUSONRVA@gmail.com
 */
-package main
+package tmc
 
-import "tmc/cmd"
+import tmc "github.com/IanRFerguson/tmc-go/cmd"
 
 func main() {
-	cmd.Execute()
+	tmc.Execute()
 }

@@ -1,7 +1,7 @@
 /*
 Copyright © 2024 IAN R FERGUSON IANFERGUSONRVA@gmail.com
 */
-package cmd
+package tmc
 
 import (
 	"os"
