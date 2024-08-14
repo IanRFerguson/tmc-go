@@ -1,6 +1,6 @@
 # TMC Go
 
-`tmc-go` is a command line tool designed to 
+`tmc-go` is a command line tool designed to streamline development environments and minimize production code.
 
 ## Installation
 Install on your local machine like so:
@@ -15,10 +15,10 @@ TMC Engineering has the `tmc-go Member Library .env` file in their 1Password vau
 ### Member Library CLI
 You can check if a domain exists in our allowlist like so:
 ```
-tmc member-library --domain movementcooperative.org
+tmc-go member-library --domain movementcooperative.org
 ```
 
 Add a new record using the method flag:
 ```
-tmc member-library --domain newdomain.org --method ADD
+tmc-go member-library --domain newdomain.org --method ADD
 ```

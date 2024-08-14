@@ -13,7 +13,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "tmc",
 	Short: "tmc-go is a set of command line tools optimized for The Movement Cooperative",
-	Long: `tmc-go is a CLI library for The Movement Coopeative written in Go.
+	Long: `tmc-go is a CLI library for The Movement Cooperative written in Go.
 
 It's intended to streamline development environments and minimize production code.`,
 }
