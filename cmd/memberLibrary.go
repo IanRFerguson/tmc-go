@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 IAN R FERGUSON <EMAIL ADDRESS>
+Copyright © 2024 IAN R FERGUSON IANFERGUSONRVA@gmail.com
 */
 package cmd
 

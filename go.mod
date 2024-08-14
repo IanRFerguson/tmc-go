@@ -1,4 +1,4 @@
-module tmc
+module github.com/IanRFerguson/tmc-go
 
 go 1.22.1
 
