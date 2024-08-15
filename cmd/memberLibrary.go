@@ -1,7 +1,7 @@
 /*
 Copyright © 2024 IAN R FERGUSON IANFERGUSONRVA@gmail.com
 */
-package cmd
+package tmc
 
 import (
 	"fmt"
@@ -18,9 +18,9 @@ var memberLibraryCmd = &cobra.Command{
 	Long: `Add domains or confirm that they exist in the Member Library allowlist.
 
 NOTE - We do not support removing domains from the allow list via the command line`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(tmc *cobra.Command, args []string) {
 		// Assign values from flags
-		_FLAGS := cmd.Flags()
+		_FLAGS := tmc.Flags()
 		_DOMAIN, _ := _FLAGS.GetString("domain")
 		_METHOD, _ := _FLAGS.GetString("method")
 		_DATABASE, _ := _FLAGS.GetString("database")
