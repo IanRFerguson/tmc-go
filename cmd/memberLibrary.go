@@ -1,7 +1,7 @@
 /*
 Copyright © 2024 IAN R FERGUSON IANFERGUSONRVA@gmail.com
 */
-package cmd
+package tmc
 
 import (
 	"fmt"
@@ -15,12 +15,14 @@ import (
 var memberLibraryCmd = &cobra.Command{
 	Use:   "member-library",
 	Short: "Interact with the TMC Member Libary",
-	Long: `Add domains or confirm that they exist in the Member Library allowlist.
+	Long: `MEMBER LIBRARY CLI
+	
+Add domains or confirm that they exist in the Member Library allowlist.
 
-NOTE - We do not support removing domains from the allow list via the command line`,
-	Run: func(cmd *cobra.Command, args []string) {
+NOTE, we do not support removing domains from the allow list via the command line`,
+	Run: func(tmc *cobra.Command, args []string) {
 		// Assign values from flags
-		_FLAGS := cmd.Flags()
+		_FLAGS := tmc.Flags()
 		_DOMAIN, _ := _FLAGS.GetString("domain")
 		_METHOD, _ := _FLAGS.GetString("method")
 		_DATABASE, _ := _FLAGS.GetString("database")
@@ -48,6 +50,8 @@ NOTE - We do not support removing domains from the allow list via the command li
 	},
 }
 
+
+// ABOUT - Writes a new domain value to the Airtable database
 func addToAirtable(airtableClient airtable.Client, domain string, database string, table string) bool {
 	exists := checkAirtable(airtableClient, domain, database, table)
 	if exists {
@@ -75,19 +79,30 @@ func addToAirtable(airtableClient airtable.Client, domain string, database strin
 	return true
 }
 
+
+// ABOUT - Checks the Airtable database to determine if a value exists
 func checkAirtable(airtableClient airtable.Client, domain string, database string, table string) bool {
-	tbl := airtableClient.GetTable(database, table)
 
-	/*
-		The logic here is as follows...
-			* The Airtable API is called
-			* The results of the reponse are pushed to an array
-			* If an offset is present, it is fed into the next API call
-			* If an offset is NOT present, break out of the loop
-	*/
+	check := false
+	domainArray := buildDomainArray(airtableClient, database, table)
 
-	endLoop, check, offset := false, false, ""
+	// Evaluate if the incoming domain is included in the domain array
+	for _, airtableDomain := range domainArray {
+		if airtableDomain == domain {
+			check = true
+		}
+	}
+
+	return check
+}
+
+
+// ABOUT - Build an array of domain names that are present in the Airtable database
+func buildDomainArray(airtableClient airtable.Client, database string, table string) []string {
+	endLoop, offset := false, ""
 	var domainArray []string
+	
+	tbl := airtableClient.GetTable(database, table)
 	for !endLoop {
 		// Hit Airtable API with offset
 		records, err := tbl.GetRecords().
@@ -102,7 +117,8 @@ func checkAirtable(airtableClient airtable.Client, domain string, database strin
 
 		// Iteratively add domain names to the running domain
 		for _, rec := range records.Records {
-			domainArray = append(domainArray, rec.Fields["domains"].(string))
+			val := rec.Fields["domains"].(string)
+			domainArray = append(domainArray, val)
 		}
 
 		/*
@@ -115,16 +131,11 @@ func checkAirtable(airtableClient airtable.Client, domain string, database strin
 		}
 	}
 
-	// Evaluate if the incoming domain is included in the domain array
-	for _, airtableDomain := range domainArray {
-		if airtableDomain == domain {
-			check = true
-		}
-	}
-
-	return check
+	return domainArray
 }
 
+
+// ABOUT - Determine if all the required environment variables are populated
 func checkEnvironment(flagValue string, envVariable string, defaultValue string) string {
 	if flagValue == defaultValue {
 		_ENV, _ENV_EXISTS := os.LookupEnv(envVariable)
