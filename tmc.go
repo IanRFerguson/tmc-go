@@ -1,7 +1,7 @@
 /*
 Copyright © 2024 IAN R FERGUSON IANFERGUSONRVA@gmail.com
 */
-package tmc
+package main
 
 import tmc "github.com/IanRFerguson/tmc-go/cmd"
 
