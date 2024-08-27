@@ -26,3 +26,4 @@ tmc-go member-library --domain newdomain.org --method ADD
 ## Dev Roadmap
 - [x] - Member Library interface
 - [ ] - 1Password interface for member service accounts
+- [ ] - Automated `.env` methods that allow the user to define a profile
