@@ -14,6 +14,7 @@ import (
 
 var memberLibraryCmd = &cobra.Command{
 	Use:   "member-library",
+	Args: cobra.ExactArgs(1),
 	Short: "Interact with the TMC Member Libary",
 	Long: `MEMBER LIBRARY CLI
 	
@@ -22,15 +23,24 @@ Add domains or confirm that they exist in the Member Library allowlist.
 NOTE, we do not support removing domains from the allow list via the command line`,
 	Run: func(tmc *cobra.Command, args []string) {
 		// Assign values from flags
+		_DOMAIN := args[0]
+
 		_FLAGS := tmc.Flags()
-		_DOMAIN, _ := _FLAGS.GetString("domain")
-		_METHOD, _ := _FLAGS.GetString("method")
 		_DATABASE, _ := _FLAGS.GetString("database")
 		_TABLE, _ := _FLAGS.GetString("table")
+		_ADD_DOMAIN, _ := _FLAGS.GetBool("addDomain")
+
+		var _METHOD string;
+		if _ADD_DOMAIN {
+			_METHOD = "ADD"
+		} else {
+			_METHOD = "CHECK"
+		}
 
 		_DATABASE = checkEnvironment(_DATABASE, "AIRTABLE_DATABASE", "DEFAULT")
 		_TABLE = checkEnvironment(_TABLE, "AIRTABLE_TABLE", "DEFAULT")
 		_API := checkEnvironment("", "AIRTABLE_API_KEY", "") // NOTE - This is a little hacky but follows the pattern
+
 
 		AIRTABLE_CLIENT := airtable.NewClient(_API)
 		switch strings.ToUpper(_METHOD) {
@@ -155,8 +165,19 @@ func init() {
 	rootCmd.AddCommand(memberLibraryCmd)
 
 	/* TODO - Better type handling here, string "DEFAULT" is bad practice */
-	memberLibraryCmd.PersistentFlags().String("domain", "DEFAULT", "Member domain to evaluate")
-	memberLibraryCmd.PersistentFlags().String("method", "CHECK", "Should be one of - ADD, CHECK")
-	memberLibraryCmd.PersistentFlags().String("database", "DEFAULT", "Airtable Database (forego this by passing in `AIRTABLE_DATABASE` to your environment)")
-	memberLibraryCmd.PersistentFlags().String("table", "DEFAULT", "Airtable Table (forego this by passing in `AIRTABLE_TABLE` to your environment)")
+	memberLibraryCmd.PersistentFlags().Bool(
+		"addDomain", 
+		false, 
+		"If supplied, the incoming domain will be added to the Airtable Database",
+	)
+	memberLibraryCmd.PersistentFlags().String(
+		"database", 
+		"DEFAULT", 
+		"Airtable Database (forego this by passing in `AIRTABLE_DATABASE` to your environment)",
+	)
+	memberLibraryCmd.PersistentFlags().String(
+		"table", 
+		"DEFAULT", 
+		"Airtable Table (forego this by passing in `AIRTABLE_TABLE` to your environment)",
+	)
 }

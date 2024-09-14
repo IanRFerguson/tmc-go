@@ -15,12 +15,12 @@ TMC Engineering has the `tmc-go Member Library .env` file in their 1Password vau
 ### Member Library CLI
 You can check if a domain exists in our allowlist like so:
 ```
-tmc-go member-library --domain movementcooperative.org
+tmc-go member-library movementcooperative.org
 ```
 
 Add a new record using the method flag:
 ```
-tmc-go member-library --domain newdomain.org --method ADD
+tmc-go member-library mynewdomain.org --addDomain
 ```
 
 ## Dev Roadmap
