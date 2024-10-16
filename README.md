@@ -27,3 +27,5 @@ tmc-go member-library mynewdomain.org --addDomain
 - [x] - Member Library interface
 - [ ] - 1Password interface for member service accounts
 - [ ] - Automated `.env` methods that allow the user to define a profile
+- [ ] - Add a new user record to the segmentation metadata
+- [ ] - Add a new member or affiliate record to the segmentation metadata
