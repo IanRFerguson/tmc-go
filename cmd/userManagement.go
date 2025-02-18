@@ -1,12 +1,13 @@
 /*
-Copyright © 2024 NAME HERE IANFERGUSONRVA@gmail.com
+Copyright © 2024 IAN FERGUSON IANFERGUSONRVA@gmail.com
 */
 package tmc
 
 import (
+	"context"
 	"fmt"
+	"strconv"
 
-	"cloud.google.com/go/bigquery"
 	"github.com/spf13/cobra"
 )
 
@@ -23,66 +24,90 @@ raw_metadata.users
 raw_segmentation_metadata.user_data_owners
 `,
 	Run: func(tmc *cobra.Command, args []string) {
-		_USER := args[0]
-		_PROJECT, _ := tmc.Flags().GetString("project")
-		_TYPE, _ := tmc.Flags().GetString("type")
-		_ORG_ID, _  := tmc.Flags().GetString("org-id")
-		_MEMBER, _ := tmc.Flags().GetBool("member")
-		_AFFILIATE, _ := tmc.Flags().GetBool("affiliate")
+		userEmail := args[0]
+		projectID, _ := tmc.Flags().GetString("project")
+		userType, _ := tmc.Flags().GetString("type")
+		rawOrganizationID, _  := tmc.Flags().GetString("org-id")
+		organizationType, _ := tmc.Flags().GetString("organization-type")
 
-		client := setupBigQuery(_PROJECT)
-		client.Query("select foo from bar")
+		organizationID, err := strconv.Atoi(rawOrganizationID)
 
 		// Validate user input
-		isMember := inferOrgType(_MEMBER, _AFFILIATE)
-		validateUserInput(client, _USER, _ORG_ID)
+		validateUserInput(userEmail, organizationID, organizationType)
+
+		ctx := context.Background()
+
+		client, err := SetupClient(ctx, projectID)
+
+		if err != nil {
+			panic(err)
+		}
 
 		// Get new user ID value
 		userID := getUserID(client)
 
 		// Get associated data owner ID value
-		dataOwnerID := getDataOwnerID(client, _ORG_ID, isMember)
+		dataOwnerID, dataOwnerCode := getDataOwnerMetadata(client, organizationID, organizationType)
+		organizationName := getOrganizationName(client, organizationID, organizationType)
+
+		// Get end user confirmation before writing to tables
+		userConfirm(userEmail, userID, dataOwnerID, dataOwnerCode, organizationID, organizationName)
 
 		// Add user to raw_metadata.users
-		addUserRecord(client, _USER, userID, _TYPE, _ORG_ID)
+		addUserRecord(client, userEmail, userID, userType, organizationID)
 
 		// Add user to raw_segmentation_metadata.user_data_owners
 		addUserDataOwner(client, userID, dataOwnerID)
+
+		defer client.client.Close()
 	},
 }
 
-func inferOrgType(member bool, affiliate bool) bool {
-	return true
-}
-
-func validateUserInput(client *bigquery.Client, user string, orgID string) bool {
+func validateUserInput(user string, organizationID int, organizationType string) {
 	fmt.Println("Validating user input...")
-
-	return true
 }
 
-func getUserID(client *bigquery.Client) int {
+func userConfirm(userEmail string, userID int, dataOwnerID int, dataOwnerCode string, organizationID int, organizationName string) {
+
+}
+
+
+///
+
+
+func getUserID(client *BigQueryClient) int {
 	return 1
 }
 
-func getDataOwnerID(client *bigquery.Client, orgID string, isMember bool) int {
-	return 1
+func getDataOwnerMetadata(client *BigQueryClient, organizationID int, organizationType string) (int, string) {
+	return 1, "1"
 }
 
-func addUserRecord(client *bigquery.Client, user string, userID int, userType string, orgID string) {
+func getOrganizationName(client *BigQueryClient, organizationID int, organizationType string) string {
+	return "1"
+}
+
+
+///
+
+
+func addUserRecord(client *BigQueryClient, user string, userID int, userType string, organizationID int) {
 	fmt.Println("Adding user record...")
 }
 
-func addUserDataOwner(client *bigquery.Client, userID int, dataOwnerID int) {
+func addUserDataOwner(client *BigQueryClient, userID int, dataOwnerID int) {
 	fmt.Println("Adding user data owner...")
 }
+
+
+///
+
 
 func init() {
 	rootCmd.AddCommand(userManagementCmd)
 
 	rootCmd.PersistentFlags().String("project", "tmc-dev-394022", "GCP Project ID to write to")
-	rootCmd.PersistentFlags().String("org-id", "NONE", "Member or Affiliate ID of affiliated organization")
 	rootCmd.PersistentFlags().String("type", "NONE", "Staff, Consultant, Service Account, etc.")
-	rootCmd.PersistentFlags().Bool("member", false, "If True, we assume this user belongs to a TMC Member")
-	rootCmd.PersistentFlags().Bool("affiliate", false, "If True, we assume this user belongs to a TMC Affiliate")
+	rootCmd.PersistentFlags().String("org-type", "NONE", "Member or Affiliate")
+	rootCmd.PersistentFlags().String("org-id", "NONE", "Member or Affiliate ID of affiliated organization")
 }
