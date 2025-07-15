@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 IAN FERGUSON IANFERGUSONRVA@gmail.com
+Copyright © 2024 IAN FERGUSON IAN@ianferguson.dev
 */
 package tmc
 

@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 IAN FERGUSON IANFERGUSONRVA@gmail.com
+Copyright © 2024 IAN FERGUSON IAN@ianferguson.dev
 */
 package tmc
 
@@ -14,7 +14,7 @@ import (
 // userManagementCmd represents the userManagement command
 var userManagementCmd = &cobra.Command{
 	Use:   "add-user",
-	Args: cobra.ExactArgs(1),
+	Args:  cobra.ExactArgs(1),
 	Short: "Add a BigQuery user",
 	Long: `BIGQUERY USERS CLI
 	
@@ -27,7 +27,7 @@ raw_segmentation_metadata.user_data_owners
 		userEmail := args[0]
 		projectID, _ := tmc.Flags().GetString("project")
 		userType, _ := tmc.Flags().GetString("type")
-		rawOrganizationID, _  := tmc.Flags().GetString("org-id")
+		rawOrganizationID, _ := tmc.Flags().GetString("org-id")
 		organizationType, _ := tmc.Flags().GetString("organization-type")
 
 		organizationID, err := strconv.Atoi(rawOrganizationID)
@@ -37,7 +37,7 @@ raw_segmentation_metadata.user_data_owners
 
 		ctx := context.Background()
 
-		client, err := SetupClient(ctx, projectID)
+		client, err := setupClient(ctx, projectID)
 
 		if err != nil {
 			panic(err)
@@ -71,9 +71,7 @@ func userConfirm(userEmail string, userID int, dataOwnerID int, dataOwnerCode st
 
 }
 
-
 ///
-
 
 func getUserID(client *BigQueryClient) int {
 	return 1
@@ -87,9 +85,7 @@ func getOrganizationName(client *BigQueryClient, organizationID int, organizatio
 	return "1"
 }
 
-
 ///
-
 
 func addUserRecord(client *BigQueryClient, user string, userID int, userType string, organizationID int) {
 	fmt.Println("Adding user record...")
@@ -99,15 +95,13 @@ func addUserDataOwner(client *BigQueryClient, userID int, dataOwnerID int) {
 	fmt.Println("Adding user data owner...")
 }
 
-
 ///
-
 
 func init() {
 	rootCmd.AddCommand(userManagementCmd)
 
-	rootCmd.PersistentFlags().String("project", "tmc-dev-394022", "GCP Project ID to write to")
-	rootCmd.PersistentFlags().String("type", "NONE", "Staff, Consultant, Service Account, etc.")
-	rootCmd.PersistentFlags().String("org-type", "NONE", "Member or Affiliate")
-	rootCmd.PersistentFlags().String("org-id", "NONE", "Member or Affiliate ID of affiliated organization")
+	userManagementCmd.PersistentFlags().String("project", "tmc-dev-394022", "GCP Project ID to write to")
+	userManagementCmd.PersistentFlags().String("type", "NONE", "Staff, Consultant, Service Account, etc.")
+	userManagementCmd.PersistentFlags().String("org-type", "NONE", "Member or Affiliate")
+	userManagementCmd.PersistentFlags().String("org-id", "NONE", "Member or Affiliate ID of affiliated organization")
 }

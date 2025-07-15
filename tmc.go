@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 IAN R FERGUSON IANFERGUSONRVA@gmail.com
+Copyright © 2024 IAN R FERGUSON IAN@ianferguson.dev
 */
 package main
 
