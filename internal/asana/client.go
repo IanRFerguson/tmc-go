@@ -14,11 +14,12 @@ import (
 	"time"
 )
 
-const baseURL = "https://app.asana.com/api/1.0"
+const defaultBaseURL = "https://app.asana.com/api/1.0"
 
 type apiClient struct {
-	apiKey string
-	http   *http.Client
+	baseURL string
+	apiKey  string
+	http    *http.Client
 }
 
 type resource struct {
@@ -63,7 +64,7 @@ type createdTask struct {
 }
 
 func newAPIClient(apiKey string) *apiClient {
-	return &apiClient{apiKey: apiKey, http: &http.Client{Timeout: 30 * time.Second}}
+	return &apiClient{baseURL: defaultBaseURL, apiKey: apiKey, http: &http.Client{Timeout: 30 * time.Second}}
 }
 
 // ABOUT - Sends a request to the Asana API and unwraps the `data` envelope into `out`
@@ -77,7 +78,7 @@ func (c *apiClient) do(method string, path string, query url.Values, body any, o
 		reqBody = bytes.NewReader(payload)
 	}
 
-	endpoint := baseURL + path
+	endpoint := c.baseURL + path
 	if len(query) > 0 {
 		endpoint += "?" + query.Encode()
 	}

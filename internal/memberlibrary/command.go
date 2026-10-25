@@ -15,7 +15,7 @@ import (
 // Command is the `tmc member-library` command
 var Command = &cobra.Command{
 	Use:   "member-library",
-	Args: cobra.ExactArgs(1),
+	Args:  cobra.ExactArgs(1),
 	Short: "Interact with the TMC Member Libary",
 	Long: `MEMBER LIBRARY CLI
 	
@@ -31,7 +31,7 @@ NOTE, we do not support removing domains from the allow list via the command lin
 		_TABLE, _ := _FLAGS.GetString("table")
 		_ADD_DOMAIN, _ := _FLAGS.GetBool("addDomain")
 
-		var _METHOD string;
+		var _METHOD string
 		if _ADD_DOMAIN {
 			_METHOD = "ADD"
 		} else {
@@ -41,7 +41,6 @@ NOTE, we do not support removing domains from the allow list via the command lin
 		_DATABASE = checkEnvironment(_DATABASE, "AIRTABLE_DATABASE", "DEFAULT")
 		_TABLE = checkEnvironment(_TABLE, "AIRTABLE_TABLE", "DEFAULT")
 		_API := checkEnvironment("", "AIRTABLE_API_KEY", "") // NOTE - This is a little hacky but follows the pattern
-
 
 		AIRTABLE_CLIENT := airtable.NewClient(_API)
 		switch strings.ToUpper(_METHOD) {
@@ -60,7 +59,6 @@ NOTE, we do not support removing domains from the allow list via the command lin
 
 	},
 }
-
 
 // ABOUT - Writes a new domain value to the Airtable database
 func addToAirtable(airtableClient airtable.Client, domain string, database string, table string) bool {
@@ -90,7 +88,6 @@ func addToAirtable(airtableClient airtable.Client, domain string, database strin
 	return true
 }
 
-
 // ABOUT - Checks the Airtable database to determine if a value exists
 func checkAirtable(airtableClient airtable.Client, domain string, database string, table string) bool {
 
@@ -107,12 +104,11 @@ func checkAirtable(airtableClient airtable.Client, domain string, database strin
 	return check
 }
 
-
 // ABOUT - Build an array of domain names that are present in the Airtable database
 func buildDomainArray(airtableClient airtable.Client, database string, table string) []string {
 	endLoop, offset := false, ""
 	var domainArray []string
-	
+
 	tbl := airtableClient.GetTable(database, table)
 	for !endLoop {
 		// Hit Airtable API with offset
@@ -145,7 +141,6 @@ func buildDomainArray(airtableClient airtable.Client, database string, table str
 	return domainArray
 }
 
-
 // ABOUT - Determine if all the required environment variables are populated
 func checkEnvironment(flagValue string, envVariable string, defaultValue string) string {
 	if flagValue == defaultValue {
@@ -166,18 +161,18 @@ func init() {
 
 	/* TODO - Better type handling here, string "DEFAULT" is bad practice */
 	Command.PersistentFlags().Bool(
-		"addDomain", 
-		false, 
+		"addDomain",
+		false,
 		"If supplied, the incoming domain will be added to the Airtable Database",
 	)
 	Command.PersistentFlags().String(
-		"database", 
-		"DEFAULT", 
+		"database",
+		"DEFAULT",
 		"Airtable Database (forego this by passing in `AIRTABLE_DATABASE` to your environment)",
 	)
 	Command.PersistentFlags().String(
-		"table", 
-		"DEFAULT", 
+		"table",
+		"DEFAULT",
 		"Airtable Table (forego this by passing in `AIRTABLE_TABLE` to your environment)",
 	)
 }

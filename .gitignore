@@ -1,3 +1,4 @@
 .env
 /tmc
 /tmc-go
+coverage.out
