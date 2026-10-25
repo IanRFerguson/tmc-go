@@ -11,9 +11,9 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "tmc-go",
-	Short: "tmc-go is a set of command line tools optimized for The Movement Cooperative",
-	Long: `tmc-go is a CLI library for The Movement Cooperative written in Go.
+	Use:   "tmc",
+	Short: "tmc is a set of command line tools optimized for The Movement Cooperative",
+	Long: `tmc is a CLI library for The Movement Cooperative written in Go.
 
 It's intended to streamline development environments and minimize production code.`,
 }
