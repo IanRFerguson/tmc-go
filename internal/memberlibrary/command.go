@@ -1,7 +1,7 @@
 /*
 Copyright © 2024 IAN R FERGUSON IANFERGUSONRVA@gmail.com
 */
-package tmc
+package memberlibrary
 
 import (
 	"fmt"
@@ -12,7 +12,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var memberLibraryCmd = &cobra.Command{
+// Command is the `tmc member-library` command
+var Command = &cobra.Command{
 	Use:   "member-library",
 	Args: cobra.ExactArgs(1),
 	Short: "Interact with the TMC Member Libary",
@@ -162,20 +163,19 @@ func checkEnvironment(flagValue string, envVariable string, defaultValue string)
 }
 
 func init() {
-	rootCmd.AddCommand(memberLibraryCmd)
 
 	/* TODO - Better type handling here, string "DEFAULT" is bad practice */
-	memberLibraryCmd.PersistentFlags().Bool(
+	Command.PersistentFlags().Bool(
 		"addDomain", 
 		false, 
 		"If supplied, the incoming domain will be added to the Airtable Database",
 	)
-	memberLibraryCmd.PersistentFlags().String(
+	Command.PersistentFlags().String(
 		"database", 
 		"DEFAULT", 
 		"Airtable Database (forego this by passing in `AIRTABLE_DATABASE` to your environment)",
 	)
-	memberLibraryCmd.PersistentFlags().String(
+	Command.PersistentFlags().String(
 		"table", 
 		"DEFAULT", 
 		"Airtable Table (forego this by passing in `AIRTABLE_TABLE` to your environment)",

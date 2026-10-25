@@ -1,11 +1,12 @@
 /*
 Copyright © 2024 IAN R FERGUSON IANFERGUSONRVA@gmail.com
 */
-package tmc
+package cli
 
 import (
 	"os"
 
+	"github.com/IanRFerguson/tmc-go/internal/memberlibrary"
 	"github.com/spf13/cobra"
 )
 
@@ -25,4 +26,6 @@ func Execute() {
 	}
 }
 
-func init() {}
+func init() {
+	rootCmd.AddCommand(memberlibrary.Command)
+}
