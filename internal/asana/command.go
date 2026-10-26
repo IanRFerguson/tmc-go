@@ -96,7 +96,7 @@ created. Generate a personal access token at https://app.asana.com/0/my-apps`,
 		}
 
 		// Existing defaults only carry over if the default project hasn't changed
-		var existingDefaults map[string]string
+		var existingDefaults map[string]fieldDefault
 		if existing.DefaultProjectGID == project.GID {
 			existingDefaults = existing.FieldDefaults
 		}
@@ -182,7 +182,7 @@ aren't prompted for; override one with --field, or clear it with --field "Name="
 			}
 		}
 
-		var fieldDefaults map[string]string
+		var fieldDefaults map[string]fieldDefault
 		if project.GID == profile.DefaultProjectGID {
 			fieldDefaults = profile.FieldDefaults
 		}

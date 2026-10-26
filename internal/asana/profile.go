@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type storedProfile struct {
@@ -18,7 +19,36 @@ type storedProfile struct {
 	DefaultProjectGID  string `json:"default_project_gid"`
 	DefaultProjectName string `json:"default_project_name"`
 	// Custom field name -> value as typed (e.g. "today"), applied when creating tasks in the default project
-	FieldDefaults map[string]string `json:"field_defaults,omitempty"`
+	FieldDefaults map[string]fieldDefault `json:"field_defaults,omitempty"`
+}
+
+// fieldDefault holds a stored custom field value; multi-select fields keep one entry per option
+// so names containing commas survive. It's written as a plain string when there's a single value.
+type fieldDefault []string
+
+func (d fieldDefault) String() string {
+	return strings.Join(d, ", ")
+}
+
+func (d fieldDefault) MarshalJSON() ([]byte, error) {
+	if len(d) == 1 {
+		return json.Marshal(d[0])
+	}
+	return json.Marshal([]string(d))
+}
+
+func (d *fieldDefault) UnmarshalJSON(raw []byte) error {
+	var single string
+	if err := json.Unmarshal(raw, &single); err == nil {
+		*d = fieldDefault{single}
+		return nil
+	}
+	var many []string
+	if err := json.Unmarshal(raw, &many); err != nil {
+		return err
+	}
+	*d = many
+	return nil
 }
 
 // ABOUT - Location of the Asana profile, i.e. ~/.tmc/asana/profile.json

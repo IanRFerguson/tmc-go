@@ -2,6 +2,7 @@ package asana
 
 import (
 	"net/http"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -151,7 +152,7 @@ var createdAtField = customField{
 
 func TestCollectCustomFieldsAppliesDefaults(t *testing.T) {
 	client := fieldSettingsServer(t, priorityField, tagsField, createdAtField)
-	defaults := map[string]string{"Created at": "today", "Priority": "Low", "Tags": "Data", "Removed": "x"}
+	defaults := map[string]fieldDefault{"Created at": {"today"}, "Priority": {"Low"}, "Tags": {"Data"}, "Removed": {"x"}}
 	today, _ := parseDueDate("today")
 
 	got, err := collectCustomFields(client, "1", defaults, []string{"Priority=High", "Tags="}, false)
@@ -164,15 +165,83 @@ func TestCollectCustomFieldsAppliesDefaults(t *testing.T) {
 	}
 }
 
+func TestCollectCustomFieldsFlagsBypassBrokenDefaults(t *testing.T) {
+	defaults := map[string]fieldDefault{"Priority": {"Retired"}}
+
+	for _, arg := range []string{"Priority=High", "Priority="} {
+		client := fieldSettingsServer(t, priorityField)
+		if _, err := collectCustomFields(client, "1", defaults, []string{arg}, false); err != nil {
+			t.Errorf("--field %q should override the broken default, got %v", arg, err)
+		}
+	}
+
+	client := fieldSettingsServer(t, priorityField)
+	if _, err := collectCustomFields(client, "1", defaults, nil, false); err == nil {
+		t.Error("expected an error for a default naming a disabled option")
+	}
+}
+
+func TestCollectCustomFieldsDoesNotPromptForClearedFields(t *testing.T) {
+	// If "Created at" were prompted for (it's listed first), it would take this date
+	stdin, err := os.CreateTemp(t.TempDir(), "stdin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdin.WriteString("2026-01-01\n")
+	stdin.Seek(0, 0)
+	realStdin := os.Stdin
+	os.Stdin = stdin
+	t.Cleanup(func() { os.Stdin = realStdin })
+
+	client := fieldSettingsServer(t, createdAtField, priorityField)
+	defaults := map[string]fieldDefault{"Created at": {"today"}}
+
+	got, err := collectCustomFields(client, "1", defaults, []string{"Created at="}, true)
+	if err != nil {
+		t.Fatalf("collectCustomFields error: %v", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("got %#v, want no fields set", got)
+	}
+}
+
+func TestParseStoredFieldValueMatchesEnumsByName(t *testing.T) {
+	numbered := customField{
+		resource:        resource{GID: "96", Name: "Size"},
+		ResourceSubtype: "multi_enum",
+		EnumOptions: []enumOption{
+			{resource: resource{GID: "s2", Name: "2"}, Enabled: true},
+			{resource: resource{GID: "big", Name: "Big"}, Enabled: true},
+			{resource: resource{GID: "sm", Name: "Sales, Marketing"}, Enabled: true},
+		},
+	}
+
+	stored, err := storableFieldValue(numbered, "1, 3")
+	if err != nil {
+		t.Fatalf("storableFieldValue error: %v", err)
+	}
+	if want := (fieldDefault{"2", "Sales, Marketing"}); !reflect.DeepEqual(stored, want) {
+		t.Fatalf("stored %#v, want %#v", stored, want)
+	}
+
+	got, err := parseStoredFieldValue(numbered, stored)
+	if err != nil {
+		t.Fatalf("parseStoredFieldValue error: %v", err)
+	}
+	if want := []string{"s2", "sm"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("got %#v, want %#v", got, want)
+	}
+}
+
 func TestCollectFieldDefaultsFromFlags(t *testing.T) {
 	client := fieldSettingsServer(t, priorityField, tagsField, createdAtField)
-	existing := map[string]string{"Priority": "Low", "Tags": "Data", "Removed": "x"}
+	existing := map[string]fieldDefault{"Priority": {"Low"}, "Tags": {"Data"}, "Removed": {"x"}}
 
 	got, err := collectFieldDefaults(client, "1", existing, []string{"created at=Today", "Tags=2, 1", "priority="}, false)
 	if err != nil {
 		t.Fatalf("collectFieldDefaults error: %v", err)
 	}
-	want := map[string]string{"Created at": "today", "Tags": "Infra, Data"}
+	want := map[string]fieldDefault{"Created at": {"today"}, "Tags": {"Infra", "Data"}}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %#v, want %#v", got, want)
 	}

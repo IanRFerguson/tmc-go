@@ -12,7 +12,7 @@ import (
 )
 
 // ABOUT - Builds the custom_fields payload from profile defaults, --field flags and, optionally, interactive prompts
-func collectCustomFields(client *apiClient, projectGID string, defaults map[string]string, fieldArgs []string, interactive bool) (map[string]any, error) {
+func collectCustomFields(client *apiClient, projectGID string, defaults map[string]fieldDefault, fieldArgs []string, interactive bool) (map[string]any, error) {
 	if len(defaults) == 0 && len(fieldArgs) == 0 && !interactive {
 		return nil, nil
 	}
@@ -24,24 +24,14 @@ func collectCustomFields(client *apiClient, projectGID string, defaults map[stri
 
 	values := map[string]any{}
 
-	for name, raw := range defaults {
-		field, found := findCustomField(settings, name)
-		if !found {
-			fmt.Fprintf(os.Stderr, "Skipping default for %q, the project no longer has that field\n", name)
-			continue
-		}
-		value, err := parseCustomFieldValue(field, raw)
-		if err != nil {
-			return nil, fmt.Errorf("default for %s: %w", field.Name, err)
-		}
-		values[field.GID] = value
-	}
-
+	// Flags go first so a field they set or clear never touches its default or gets prompted for
+	setByFlag := map[string]bool{}
 	for _, arg := range fieldArgs {
 		field, raw, err := parseFieldArg(settings, arg)
 		if err != nil {
 			return nil, err
 		}
+		setByFlag[field.GID] = true
 		// An empty value (e.g. --field "Created at=") clears a default
 		if raw == "" {
 			delete(values, field.GID)
@@ -54,6 +44,22 @@ func collectCustomFields(client *apiClient, projectGID string, defaults map[stri
 		values[field.GID] = value
 	}
 
+	for name, stored := range defaults {
+		field, found := findCustomField(settings, name)
+		if !found {
+			fmt.Fprintf(os.Stderr, "Skipping default for %q, the project no longer has that field\n", name)
+			continue
+		}
+		if setByFlag[field.GID] {
+			continue
+		}
+		value, err := parseStoredFieldValue(field, stored)
+		if err != nil {
+			return nil, fmt.Errorf("default for %s: %w (override it with --field, or rerun `tmc asana setup`)", field.Name, err)
+		}
+		values[field.GID] = value
+	}
+
 	if !interactive {
 		return values, nil
 	}
@@ -62,7 +68,7 @@ func collectCustomFields(client *apiClient, projectGID string, defaults map[stri
 	printedHeader := false
 	for _, setting := range settings {
 		field := setting.CustomField
-		if _, alreadySet := values[field.GID]; alreadySet || !isPromptableField(field) {
+		if _, alreadySet := values[field.GID]; alreadySet || setByFlag[field.GID] || !isPromptableField(field) {
 			continue
 		}
 		if !printedHeader {
@@ -92,7 +98,7 @@ func collectCustomFields(client *apiClient, projectGID string, defaults map[stri
 }
 
 // ABOUT - Builds the field defaults stored in the profile from --field flags and, optionally, interactive prompts
-func collectFieldDefaults(client *apiClient, projectGID string, existing map[string]string, fieldArgs []string, interactive bool) (map[string]string, error) {
+func collectFieldDefaults(client *apiClient, projectGID string, existing map[string]fieldDefault, fieldArgs []string, interactive bool) (map[string]fieldDefault, error) {
 	if len(existing) == 0 && len(fieldArgs) == 0 && !interactive {
 		return nil, nil
 	}
@@ -103,10 +109,10 @@ func collectFieldDefaults(client *apiClient, projectGID string, existing map[str
 	}
 
 	// Carry over existing defaults, dropping any for fields the project no longer has
-	defaults := map[string]string{}
-	for name, raw := range existing {
+	defaults := map[string]fieldDefault{}
+	for name, stored := range existing {
 		if field, found := findCustomField(settings, name); found {
-			defaults[field.Name] = raw
+			defaults[field.Name] = stored
 		}
 	}
 
@@ -189,25 +195,51 @@ func parseFieldArg(settings []customFieldSetting, arg string) (customField, stri
 
 // ABOUT - Validates a default and stores enum choices by name, since list numbers can shift.
 // Dates are kept as typed so "today" is resolved when each task is created.
-func storableFieldValue(field customField, raw string) (string, error) {
+func storableFieldValue(field customField, raw string) (fieldDefault, error) {
 	if _, err := parseCustomFieldValue(field, raw); err != nil {
-		return "", err
+		return nil, err
 	}
 	switch field.ResourceSubtype {
 	case "enum":
 		option, _ := matchEnumOption(field, raw)
-		return option.Name, nil
+		return fieldDefault{option.Name}, nil
 	case "multi_enum":
-		var names []string
+		var names fieldDefault
 		for _, part := range strings.Split(raw, ",") {
 			option, _ := matchEnumOption(field, strings.TrimSpace(part))
 			names = append(names, option.Name)
 		}
-		return strings.Join(names, ", "), nil
+		return names, nil
 	case "date":
-		return strings.ToLower(raw), nil
+		return fieldDefault{strings.ToLower(raw)}, nil
 	}
-	return raw, nil
+	return fieldDefault{raw}, nil
+}
+
+// ABOUT - Converts a stored default into an API value, matching enum options strictly by name
+func parseStoredFieldValue(field customField, stored fieldDefault) (any, error) {
+	if len(stored) == 0 {
+		return nil, fmt.Errorf("no value stored")
+	}
+	switch field.ResourceSubtype {
+	case "enum":
+		option, err := enumOptionByName(field, stored[0])
+		if err != nil {
+			return nil, err
+		}
+		return option.GID, nil
+	case "multi_enum":
+		var gids []string
+		for _, name := range stored {
+			option, err := enumOptionByName(field, name)
+			if err != nil {
+				return nil, err
+			}
+			gids = append(gids, option.GID)
+		}
+		return gids, nil
+	}
+	return parseCustomFieldValue(field, stored[0])
 }
 
 func findCustomField(settings []customFieldSetting, name string) (customField, bool) {
@@ -295,12 +327,16 @@ func matchEnumOption(field customField, raw string) (enumOption, error) {
 	if i, err := strconv.Atoi(raw); err == nil && i >= 1 && i <= len(options) {
 		return options[i-1], nil
 	}
-	for _, option := range options {
-		if strings.EqualFold(option.Name, raw) {
+	return enumOptionByName(field, raw)
+}
+
+func enumOptionByName(field customField, name string) (enumOption, error) {
+	for _, option := range enabledOptions(field) {
+		if strings.EqualFold(option.Name, name) {
 			return option, nil
 		}
 	}
-	return enumOption{}, fmt.Errorf("%q is not an option for %s", raw, field.Name)
+	return enumOption{}, fmt.Errorf("%q is not an option for %s", name, field.Name)
 }
 
 func enabledOptions(field customField) []enumOption {

@@ -1,6 +1,7 @@
 package asana
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -26,7 +27,7 @@ func TestSaveAndLoadProfile(t *testing.T) {
 		WorkspaceName:      "TMC",
 		DefaultProjectGID:  "1",
 		DefaultProjectName: "Ops",
-		FieldDefaults:      map[string]string{"Created at": "today"},
+		FieldDefaults:      map[string]fieldDefault{"Created at": {"today"}, "Tags": {"Data", "Sales, Marketing"}},
 	}
 	path, err := saveProfile(want)
 	if err != nil {
@@ -120,5 +121,23 @@ func TestLoadProfileEnvOverridesAPIKey(t *testing.T) {
 	}
 	if got.APIKey != "from-env" {
 		t.Errorf("APIKey = %q, want from-env", got.APIKey)
+	}
+}
+
+func TestFieldDefaultJSON(t *testing.T) {
+	raw, err := json.Marshal(map[string]fieldDefault{"a": {"today"}, "b": {"x", "y, z"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"a":"today","b":["x","y, z"]}`; string(raw) != want {
+		t.Errorf("marshalled %s, want %s", raw, want)
+	}
+
+	var got map[string]fieldDefault
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatal(err)
+	}
+	if want := (map[string]fieldDefault{"a": {"today"}, "b": {"x", "y, z"}}); !reflect.DeepEqual(got, want) {
+		t.Errorf("unmarshalled %#v, want %#v", got, want)
 	}
 }
