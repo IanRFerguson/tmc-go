@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -26,17 +27,23 @@ Run ` + "`tmc asana setup`" + ` once to store your API key and default project i
 
 var setupCmd = &cobra.Command{
 	Use:   "setup",
-	Short: "Store an Asana API key and default project",
+	Short: "Store an Asana API key, default project and custom field defaults",
 	Long: `Creates (or overwrites) your Asana profile at ~/.tmc/asana/profile.json.
 
-Any values not passed as flags are prompted for. Generate a personal access
-token at https://app.asana.com/0/my-apps`,
+Any values not passed as flags are prompted for, including default values for
+the project's custom fields. Defaults are applied to every task created in the
+default project; date defaults like "today" are resolved when the task is
+created. Generate a personal access token at https://app.asana.com/0/my-apps`,
+	Example: `  tmc asana setup
+  tmc asana setup --project "Ian's Tasks" --field "Created at=today" --field "Priority=Medium"`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		flags := cmd.Flags()
 		apiKey, _ := flags.GetString("api-key")
 		projectName, _ := flags.GetString("project")
 		workspaceFilter, _ := flags.GetString("workspace")
+		fieldArgs, _ := flags.GetStringArray("field")
+		noFields, _ := flags.GetBool("no-fields")
 
 		reader := bufio.NewReader(os.Stdin)
 		existing, _ := loadProfile()
@@ -88,18 +95,37 @@ token at https://app.asana.com/0/my-apps`,
 			return err
 		}
 
+		// Existing defaults only carry over if the default project hasn't changed
+		var existingDefaults map[string]string
+		if existing.DefaultProjectGID == project.GID {
+			existingDefaults = existing.FieldDefaults
+		}
+		fieldDefaults, err := collectFieldDefaults(client, project.GID, existingDefaults, fieldArgs, !noFields && stdinIsTerminal())
+		if err != nil {
+			return err
+		}
+
 		path, err := saveProfile(storedProfile{
 			APIKey:             apiKey,
 			WorkspaceGID:       workspace.GID,
 			WorkspaceName:      workspace.Name,
 			DefaultProjectGID:  project.GID,
 			DefaultProjectName: project.Name,
+			FieldDefaults:      fieldDefaults,
 		})
 		if err != nil {
 			return err
 		}
 
 		fmt.Printf("✅ - Saved profile to %s (default project: %s / %s)\n", path, workspace.Name, project.Name)
+		names := make([]string, 0, len(fieldDefaults))
+		for name := range fieldDefaults {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			fmt.Printf("  %s = %s\n", name, fieldDefaults[name])
+		}
 		return nil
 	},
 }
@@ -111,7 +137,10 @@ var createCmd = &cobra.Command{
 
 If the project has custom fields you'll be prompted for each one; leave a
 prompt blank to skip it. Use --field "Name=value" to set fields without
-prompting, or --no-fields to skip the prompts entirely.`,
+prompting, or --no-fields to skip the prompts entirely.
+
+Field defaults saved by ` + "`tmc asana setup`" + ` are applied in the default project and
+aren't prompted for; override one with --field, or clear it with --field "Name=".`,
 	Example: `  tmc asana create "Fix the sync for ACME"
   tmc asana create Fix the sync for ACME -d "Mobilize creds expired" --due tomorrow --assign-me
   tmc asana create "Quarterly review" -p "Ops" --field "Priority=High" --no-fields
@@ -153,7 +182,12 @@ prompting, or --no-fields to skip the prompts entirely.`,
 			}
 		}
 
-		customFields, err := collectCustomFields(client, project.GID, fieldArgs, !noFields && stdinIsTerminal())
+		var fieldDefaults map[string]string
+		if project.GID == profile.DefaultProjectGID {
+			fieldDefaults = profile.FieldDefaults
+		}
+
+		customFields, err := collectCustomFields(client, project.GID, fieldDefaults, fieldArgs, !noFields && stdinIsTerminal())
 		if err != nil {
 			return err
 		}
@@ -250,6 +284,8 @@ func init() {
 	setupCmd.Flags().String("api-key", "", "Asana personal access token (prompted for if omitted)")
 	setupCmd.Flags().String("project", "", "Default project name to create tasks in (prompted for if omitted)")
 	setupCmd.Flags().String("workspace", "", "Workspace name or GID, only needed if the project name exists in several workspaces")
+	setupCmd.Flags().StringArray("field", nil, "Set a custom field default as \"Name=value\" (repeatable; empty value clears it)")
+	setupCmd.Flags().Bool("no-fields", false, "Don't prompt for custom field defaults")
 
 	createCmd.Flags().StringP("description", "d", "", "Task description; pass - to read it from stdin")
 	createCmd.Flags().StringP("project", "p", "", "Project name or GID (defaults to the project in your profile)")

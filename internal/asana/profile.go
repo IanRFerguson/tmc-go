@@ -17,6 +17,8 @@ type storedProfile struct {
 	WorkspaceName      string `json:"workspace_name"`
 	DefaultProjectGID  string `json:"default_project_gid"`
 	DefaultProjectName string `json:"default_project_name"`
+	// Custom field name -> value as typed (e.g. "today"), applied when creating tasks in the default project
+	FieldDefaults map[string]string `json:"field_defaults,omitempty"`
 }
 
 // ABOUT - Location of the Asana profile, i.e. ~/.tmc/asana/profile.json

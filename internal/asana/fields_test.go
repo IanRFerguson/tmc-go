@@ -106,7 +106,7 @@ func fieldSettingsServer(t *testing.T, fields ...customField) *apiClient {
 func TestCollectCustomFieldsFromFlags(t *testing.T) {
 	client := fieldSettingsServer(t, priorityField, tagsField)
 
-	got, err := collectCustomFields(client, "1", []string{"priority=High", "Tags = Data,Infra"}, false)
+	got, err := collectCustomFields(client, "1", nil, []string{"priority=High", "Tags = Data,Infra"}, false)
 	if err != nil {
 		t.Fatalf("collectCustomFields error: %v", err)
 	}
@@ -126,7 +126,7 @@ func TestCollectCustomFieldsFlagErrors(t *testing.T) {
 	for name, arg := range tests {
 		t.Run(name, func(t *testing.T) {
 			client := fieldSettingsServer(t, priorityField)
-			if _, err := collectCustomFields(client, "1", []string{arg}, false); err == nil {
+			if _, err := collectCustomFields(client, "1", nil, []string{arg}, false); err == nil {
 				t.Errorf("expected an error for --field %q", arg)
 			}
 		})
@@ -138,8 +138,49 @@ func TestCollectCustomFieldsSkipsAPIWhenNothingToDo(t *testing.T) {
 		t.Errorf("unexpected request to %s", r.URL.Path)
 	})
 
-	got, err := collectCustomFields(client, "1", nil, false)
+	got, err := collectCustomFields(client, "1", nil, nil, false)
 	if err != nil || got != nil {
 		t.Errorf("got %v, %v; want nil, nil", got, err)
+	}
+}
+
+var createdAtField = customField{
+	resource:        resource{GID: "97", Name: "Created at"},
+	ResourceSubtype: "date",
+}
+
+func TestCollectCustomFieldsAppliesDefaults(t *testing.T) {
+	client := fieldSettingsServer(t, priorityField, tagsField, createdAtField)
+	defaults := map[string]string{"Created at": "today", "Priority": "Low", "Tags": "Data", "Removed": "x"}
+	today, _ := parseDueDate("today")
+
+	got, err := collectCustomFields(client, "1", defaults, []string{"Priority=High", "Tags="}, false)
+	if err != nil {
+		t.Fatalf("collectCustomFields error: %v", err)
+	}
+	want := map[string]any{"97": map[string]string{"date": today}, "99": "c"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %#v, want %#v", got, want)
+	}
+}
+
+func TestCollectFieldDefaultsFromFlags(t *testing.T) {
+	client := fieldSettingsServer(t, priorityField, tagsField, createdAtField)
+	existing := map[string]string{"Priority": "Low", "Tags": "Data", "Removed": "x"}
+
+	got, err := collectFieldDefaults(client, "1", existing, []string{"created at=Today", "Tags=2, 1", "priority="}, false)
+	if err != nil {
+		t.Fatalf("collectFieldDefaults error: %v", err)
+	}
+	want := map[string]string{"Created at": "today", "Tags": "Infra, Data"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %#v, want %#v", got, want)
+	}
+}
+
+func TestCollectFieldDefaultsRejectsInvalidValues(t *testing.T) {
+	client := fieldSettingsServer(t, createdAtField)
+	if _, err := collectFieldDefaults(client, "1", nil, []string{"Created at=someday"}, false); err == nil {
+		t.Error("expected an error for an invalid date default")
 	}
 }

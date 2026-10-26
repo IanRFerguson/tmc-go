@@ -3,6 +3,7 @@ package asana
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -25,6 +26,7 @@ func TestSaveAndLoadProfile(t *testing.T) {
 		WorkspaceName:      "TMC",
 		DefaultProjectGID:  "1",
 		DefaultProjectName: "Ops",
+		FieldDefaults:      map[string]string{"Created at": "today"},
 	}
 	path, err := saveProfile(want)
 	if err != nil {
@@ -38,7 +40,7 @@ func TestSaveAndLoadProfile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadProfile error: %v", err)
 	}
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("loadProfile = %+v, want %+v", got, want)
 	}
 }

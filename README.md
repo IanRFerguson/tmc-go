@@ -36,7 +36,15 @@ tmc asana create "Fix the sync for ACME" -d "Mobilize creds expired" --due tomor
 tmc asana create "Quarterly review" -p "Ops" --field "Priority=High"
 ```
 
-If the project has custom fields you'll be prompted for them (leave blank to skip, or pass `--no-fields`). Setting `ASANA_API_KEY` in your environment overrides the stored key.
+If the project has custom fields you'll be prompted for them (leave blank to skip, or pass `--no-fields`).
+
+`setup` also asks for default custom field values, which are applied to every task in your default project (and not prompted for). Date defaults like `today` are resolved when each task is created:
+```
+tmc asana setup --field "Created at=today"
+tmc asana create "Fix the sync" --field "Created at="   # skip a default for one task
+```
+
+Setting `ASANA_API_KEY` in your environment overrides the stored key.
 
 ## Dev Roadmap
 - [x] - Member Library interface
